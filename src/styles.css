@@ -10,3 +10,39 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+/* —— Task 10 组件样式追加 —— */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.banner, .auth-card { padding: 8px 16px; background: #3a2b1e; border-bottom: 1px solid var(--border); font-size: 13px; }
+.auth-card code { display: block; margin: 6px 0; padding: 6px; background: #0a0e14; border-radius: 6px; }
+.layout { display: flex; flex: 1; min-height: 0; }
+.sidebar { width: 260px; border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; background: var(--panel); }
+.agent { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.agent-ready .badge { color: #3fd68f; }
+.agent-needs-auth .badge { color: #f7b84f; }
+.agent-error .badge, .err { color: var(--danger); }
+.badge { font-size: 11px; margin-left: 8px; }
+.new-session { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.new-session input { flex: 1; min-width: 120px; }
+input, textarea, button { background: #0a0e14; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font: inherit; }
+button { cursor: pointer; } button:disabled { opacity: .5; cursor: default; }
+button.primary { border-color: var(--accent); }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.main.empty { align-items: center; justify-content: center; color: var(--muted); }
+.messages { flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+.msg pre { white-space: pre-wrap; word-break: break-word; font: inherit; padding: 10px 14px; border-radius: 10px; }
+.msg-user pre { background: #1d2a3f; align-self: flex-end; max-width: 80%; }
+.msg-assistant-text pre { background: var(--panel); }
+.msg-thought pre { color: var(--muted); font-style: italic; background: transparent; }
+.tool { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; background: var(--panel); font-size: 13px; }
+.tool-completed { border-color: #2b4a35; } .tool-failed { border-color: #4a2b2b; }
+.tool-head { display: flex; gap: 8px; align-items: center; }
+.tool-content { margin-top: 6px; font-size: 12px; color: var(--muted); max-height: 240px; overflow: auto; }
+.unknown { color: var(--muted); font-size: 12px; }
+.composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.composer textarea { flex: 1; height: 64px; resize: none; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: min(560px, 92vw); }
+.modal-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.session-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.session-list button { width: 100%; text-align: left; font-size: 12.5px; }
