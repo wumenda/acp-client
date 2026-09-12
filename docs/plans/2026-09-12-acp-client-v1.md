@@ -841,10 +841,14 @@ export function stdioToStream(stdin: Writable, stdout: Readable): Stream {
   )
 }
 
-/** agentCapabilities 的窄化读取（避免 any，容忍字段缺失）。 */
-export type CoreCaps = { loadSession?: boolean; listSessions?: boolean }
+/** agentCapabilities 的窄化读取（避免 any，容忍字段缺失）。
+ *  实测（Task 5 修正）：listSessions 不是顶层字段，list/resume 能力挂在 agentCapabilities.sessionCapabilities 下。 */
+export type CoreCaps = { loadSession?: boolean; sessionCapabilities?: { list?: unknown; resume?: unknown; close?: unknown } }
 export function capsOf(info: InitializeResponse): CoreCaps {
   return (info.agentCapabilities ?? {}) as CoreCaps
+}
+export function canList(info: InitializeResponse): boolean {
+  return capsOf(info).sessionCapabilities?.list != null
 }
 ```
 
@@ -1102,7 +1106,7 @@ import type {
 import type { AgentDef } from "../shared/agent-def"
 import type { AgentStatusView, SessionMetaView } from "../shared/bridge-protocol"
 import { spawnAgentProcess, type AgentProcess } from "./agent-process"
-import { connectAcp, capsOf, type AcpConnection } from "./connection"
+import { connectAcp, capsOf, canList, type AcpConnection } from "./connection"
 
 export type AgentStatus = "stopped" | "starting" | "ready" | "error" | "needs-auth"
 
@@ -1247,13 +1251,13 @@ export class AgentStore {
 
   async listSessions(agentId: string, cwd?: string): Promise<SessionMetaView[]> {
     const { acp } = this.ready(agentId)
-    if (capsOf(acp.info).listSessions !== true) return []
+    if (!canList(acp.info)) return []
     const res = await acp.agent.request("session/list", { cwd: cwd ?? null })
     const views = res.sessions.map((s) => ({
       sessionId: s.sessionId,
       cwd: s.cwd,
       title: s.title,
-      updatedAt: s.updatedAt,
+      updatedAt: s.updatedAt ?? Date.now(),
     }))
     this.events.onSessionList(agentId, views)
     return views
@@ -1330,7 +1334,7 @@ export class AgentStore {
       status: r.status,
       error: r.status === "error" ? r.errorMsg : undefined,
       loadSupported: caps.loadSession === true,
-      listSupported: caps.listSessions === true,
+      listSupported: caps.sessionCapabilities?.list != null,
       authMethods:
         r.acp?.info.authMethods?.map((m) => ({
           id: m.id,
@@ -1372,7 +1376,7 @@ export type AgentStatusView = {
   authMethods: AgentAuthMethodView[]
 }
 
-export type SessionMetaView = { sessionId: string; cwd: string; title?: string; updatedAt: number }
+export type SessionMetaView = { sessionId: string; cwd: string; title?: string; updatedAt: string | number }
 
 export type BridgeCommand =
   | { type: "agent.start"; agentId: string }

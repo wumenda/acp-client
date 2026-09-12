@@ -67,8 +67,12 @@ export function stdioToStream(stdin: Writable, stdout: Readable): Stream {
   )
 }
 
-/** agentCapabilities 的窄化读取（避免 any，容忍字段缺失）。 */
-export type CoreCaps = { loadSession?: boolean; listSessions?: boolean }
+/** agentCapabilities 的窄化读取（避免 any，容忍字段缺失）。
+ *  实测（Task 5 修正）：listSessions 不是顶层字段，list/resume/close 能力挂在 agentCapabilities.sessionCapabilities 下。 */
+export type CoreCaps = { loadSession?: boolean; sessionCapabilities?: { list?: unknown; resume?: unknown; close?: unknown } }
 export function capsOf(info: InitializeResponse): CoreCaps {
   return (info.agentCapabilities ?? {}) as CoreCaps
+}
+export function canList(info: InitializeResponse): boolean {
+  return capsOf(info).sessionCapabilities?.list != null
 }
