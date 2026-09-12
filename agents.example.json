@@ -1,0 +1,12 @@
+{
+  "agents": [
+    { "name": "dsh", "command": "dsh", "args": ["--profile", "acp"], "env": {}, "builtin": true },
+    { "name": "opencode", "command": "opencode", "args": ["acp"], "env": {}, "builtin": true },
+    {
+      "name": "fake",
+      "command": "node",
+      "args": ["--import", "tsx", "C:/Users/Wumd/Desktop/harness/acp-client/tests/fake-agent-child.ts"],
+      "env": { "FAKE_ASK_PERMISSION": "1" }
+    }
+  ]
+}
