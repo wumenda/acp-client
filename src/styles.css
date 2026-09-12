@@ -1,0 +1,12 @@
+/* src/styles.css（基础变量，后续任务追加组件样式） */
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #2d3646;
+  --text: #e6edf3;
+  --muted: #8b98a9;
+  --accent: #4f8ff7;
+  --danger: #f78166;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
