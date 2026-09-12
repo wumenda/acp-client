@@ -7,7 +7,9 @@ import { t } from "../i18n"
 export function MessageList({ agentId, sessionId }: { agentId: string; sessionId: string }) {
   const blocks = useFront((s) => s.blocks[`${agentId}:${sessionId}`]) ?? []
   const bottom = useRef<HTMLDivElement>(null)
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [blocks.length])
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" })
+  }, [blocks.length])
   return (
     <div className="messages">
       {blocks.map((b, i) => {
