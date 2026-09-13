@@ -268,6 +268,19 @@ body::after {
   from { opacity: 0; translate: 0 -8px; }
   to   { opacity: 1; translate: 0 0; }
 }
+/* 全局操作错误横幅：红色系 + 可关闭 */
+.banner.banner-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(720px, 90vw);
+  border-radius: 14px;
+  color: var(--danger);
+  border-color: rgba(255, 59, 48, 0.45);
+  box-shadow: 0 6px 24px rgba(255, 59, 48, 0.18), var(--glass-inner-hl);
+}
+.banner-err-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: break-all; }
+.banner-close { flex: none; width: 22px; height: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 
 /* —— 认证提示卡 —— */
 .auth-card {
@@ -372,27 +385,55 @@ body::after {
 .agent-starting .dot { animation: pulse-fade 1.2s ease-in-out infinite; }
 :root[data-theme="dark"] .agent-ready .badge { box-shadow: 0 0 12px rgba(48, 209, 88, 0.25); }
 
+/* 启动按钮：启动中禁用 + spinner（status=starting 期间的可见反馈） */
+.btn-start { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-start:disabled { opacity: 0.65; cursor: progress; }
+.btn-spinner {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: btn-spin 0.8s linear infinite;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
 .err { color: var(--danger); font-size: 12.5px; margin-top: 6px; word-break: break-all; }
 
 .new-session { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .new-session input { flex: 1; min-width: 120px; }
 
-.session-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.session-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+/* 会话条目：列表项风格（弱化按钮感），聊天气泡图标标识"历史会话" */
 .session-list button {
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   text-align: left;
   font-size: 12.5px;
-  border-radius: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
+.session-list button:hover {
+  background: var(--tag-bg);
+  border-color: transparent;
+  color: var(--text);
+}
+.session-list button .session-ico { flex: none; color: var(--muted); opacity: 0.75; }
+.session-list button .session-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-list button.is-active {
   background: var(--primary-soft);
-  border-color: var(--primary);
+  border-color: transparent;
   color: var(--primary);
   font-weight: 600;
 }
+.session-list button.is-active .session-ico { color: var(--primary); opacity: 1; }
 
 /* —— 胶囊按钮 —— */
 button {
@@ -472,6 +513,31 @@ input:focus, select:focus, textarea:focus {
 :root[data-theme="dark"] textarea:focus, :root[data-theme="dark"] input:focus {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 3.5px var(--primary-ring), 0 0 20px rgba(77, 163, 255, 0.18);
 }
+
+/* —— select 主题适配 —— */
+/* 去掉原生箭头，换成跟随主题的中性色 chevron。
+   注意 data URI 不带 charset 参数且 SVG 需显式 width/height，否则 Chromium 解析失败会回退成不透明白底 */
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 11px;
+}
+:root[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398989f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+/* option 弹层（Chromium/Edge 显式生效；macOS 走系统深色由 color-scheme 保证） */
+select option, select optgroup {
+  background: #f5f6fa;
+  color: var(--text);
+}
+:root[data-theme="dark"] select option, :root[data-theme="dark"] select optgroup {
+  background: #1c202c;
+  color: var(--text);
+}
+select option:checked { background: var(--primary-soft); }
 
 /* —— 主会话区 —— */
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
@@ -789,51 +855,6 @@ input:focus, select:focus, textarea:focus {
   color: var(--muted);
 }
 
-/* —— 多会话标签条（§2.4-22） —— */
-.session-tabs {
-  flex: none;
-  display: flex;
-  gap: 6px;
-  padding: 10px 16px 0;
-  overflow-x: auto;
-}
-.session-tab {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  max-width: 220px;
-  border-radius: 10px;
-  border: 1px solid var(--glass-edge);
-  background: var(--note-bg);
-  transition: border-color var(--dur-fast) var(--ease-spring), background var(--dur-fast) var(--ease-spring);
-}
-.session-tab.is-active { border-color: var(--primary); background: var(--primary-soft); }
-.session-tab > button[role="tab"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  border: none;
-  background: none;
-  box-shadow: none;
-  padding: 5px 4px 5px 10px;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.session-tab .dot { width: 7px; height: 7px; }
-.tab-close {
-  border: none;
-  background: none;
-  box-shadow: none;
-  padding: 2px 8px 2px 0;
-  font-size: 13px;
-  color: var(--muted);
-  border-radius: 0 10px 10px 0;
-}
-.tab-close:hover { color: var(--danger); }
-
 /* —— 会话删除按钮（P1-15） —— */
 .session-item { display: flex; gap: 4px; align-items: center; }
 .session-item > button:first-child { flex: 1; min-width: 0; }
@@ -971,7 +992,6 @@ input:focus, select:focus, textarea:focus {
   padding: 10px 20px 0;
   flex-wrap: wrap;
 }
-.session-controls select { max-width: 220px; font-size: 12.5px; padding: 4px 8px; }
 .session-controls .config-bool {
   display: inline-flex;
   gap: 6px;
@@ -981,6 +1001,57 @@ input:focus, select:focus, textarea:focus {
   cursor: pointer;
 }
 .session-controls input[type="checkbox"] { accent-color: var(--primary); }
+
+/* —— 玻璃下拉（GlassSelect：替代原生 select，弹层可主题化） —— */
+.gselect { position: relative; flex: none; }
+.gselect-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+.gselect-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gselect-chevron { flex: none; color: var(--muted); transition: transform var(--dur-fast) var(--ease-spring); }
+.gselect.is-open .gselect-chevron { transform: rotate(180deg); }
+.gselect-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  max-width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 14px;
+  animation: gselect-in 0.22s var(--ease-spring) both;
+}
+@keyframes gselect-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.gselect-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 9px;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--text);
+  white-space: nowrap;
+}
+.gselect-option:hover,
+.gselect-option.is-active { background: var(--primary-soft); color: var(--text); border-color: transparent; }
+.gselect-option.is-selected { color: var(--primary); font-weight: 600; }
+.gselect-check { flex: none; width: 14px; font-size: 11px; }
 
 /* —— 任务计划卡（P1-9） —— */
 .plan-card {

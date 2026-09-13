@@ -375,17 +375,29 @@ export function reduceEvent(s: FrontState, e: BridgeEvent): FrontState {
     }
     case "agent.status":
       return { ...s, agents: { ...s.agents, [e.agent.agentId]: e.agent } }
-    case "session.list":
-      return { ...s, sessions: { ...s.sessions, [e.agentId]: e.sessions } }
+    case "session.list": {
+      // title 防跳动：agent 全量列表可能缺 title（尚未生成/形态差异），已在本地的
+      // 动态标题（session_info_update / cache）优先保留，避免名字在两次刷新间来回变
+      const prev = s.sessions[e.agentId] ?? []
+      const prevTitle = new Map(prev.map((x) => [x.sessionId, x.title]))
+      const merged = e.sessions.map((x) => (x.title || !prevTitle.get(x.sessionId) ? x : { ...x, title: prevTitle.get(x.sessionId) }))
+      // 权威列表可能不含刚创建/未持久化的会话（pi/codex 等桥接包 list 不含内存会话）：
+      // 已打开（openOrder）但权威列表缺失的会话保留在头部，避免新建会话被刷新冲掉
+      const known = new Set(e.sessions.map((x) => x.sessionId))
+      const openMissing = prev.filter((x) => !known.has(x.sessionId) && s.openOrder.includes(sessionKey(e.agentId, x.sessionId)))
+      return { ...s, sessions: { ...s.sessions, [e.agentId]: [...openMissing, ...merged] } }
+    }
     case "session.opened": {
       const k = sessionKey(e.agentId, e.sessionId)
       const openOrder = s.openOrder.includes(k) ? s.openOrder : [...s.openOrder, k]
       // 新建/恢复的会话即时写入侧栏列表：不支持 list 的 agent 也能看到刚建的会话；
       // 支持 list 的 agent 随后会被自动刷新的权威列表覆盖（标题由 agent 生成后亦然）
       const list = s.sessions[e.agentId] ?? []
-      const sessions = list.some((x) => x.sessionId === e.sessionId)
-        ? s.sessions
-        : { ...s.sessions, [e.agentId]: [{ sessionId: e.sessionId, cwd: e.cwd, updatedAt: Date.now() }, ...list] }
+      const exists = list.some((x) => x.sessionId === e.sessionId)
+      const sessions = exists
+        // 已在列表：仅补齐缺失的 title（避免 opened 事件与列表间名字跳动）
+        ? { ...s.sessions, [e.agentId]: list.map((x) => (x.sessionId === e.sessionId && e.title && !x.title ? { ...x, title: e.title } : x)) }
+        : { ...s.sessions, [e.agentId]: [{ sessionId: e.sessionId, cwd: e.cwd, ...(e.title ? { title: e.title } : {}), updatedAt: Date.now() }, ...list] }
       const controls = e.modes || e.configOptions ? { ...s.controls, [k]: { modes: e.modes, configOptions: e.configOptions } } : s.controls
       return { ...s, openOrder, sessions, controls, activeKey: k, blocks: { ...s.blocks, [k]: s.blocks[k] ?? [] } }
     }
@@ -482,11 +494,6 @@ export function reduceEvent(s: FrontState, e: BridgeEvent): FrontState {
   }
 }
 
-/** 会话标签切换（§2.4-22）：本地动作，不触发 session/load 重放。 */
-export function setActiveSession(agentId: string, sessionId: string): void {
-  useFront.setState((s) => ({ ...s, activeKey: sessionKey(agentId, sessionId) }))
-}
-
 // —— 输入排队（§2.4-21）：busy 期间发送入队，轮末自动提交队首 ——
 
 export function enqueuePrompt(agentId: string, sessionId: string, item: QueuedPrompt): void {
@@ -504,16 +511,6 @@ export function takeQueuedPrompt(agentId: string, sessionId: string): QueuedProm
   const [head, ...rest] = queue
   useFront.setState((s) => ({ ...s, queues: { ...s.queues, [k]: rest } }))
   return head ?? null
-}
-
-/** 关闭会话标签（§2.4-22）：仅移出视图态，agent 侧会话不受影响。 */
-export function closeSessionTab(agentId: string, sessionId: string): void {
-  useFront.setState((s) => {
-    const k = sessionKey(agentId, sessionId)
-    const openOrder = s.openOrder.filter((x) => x !== k)
-    const activeKey = s.activeKey === k ? openOrder.at(-1) ?? null : s.activeKey
-    return { ...s, openOrder, activeKey }
-  })
 }
 
 export const useFront = create<FrontState & { apply: (e: BridgeEvent) => void }>((set) => ({

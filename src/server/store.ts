@@ -144,15 +144,16 @@ export class AgentStore {
         },
       })
       r.acp = acp
-      // 崩溃检测：非主动 stop 的退出 → stopped（v1 手动重启策略）
+      // 崩溃检测：非主动 stop 的退出 → stopped（v1 手动重启策略）。
+      // error 态（如会话创建失败）不降级 stopped：保留 errorMsg 可见，用户点启动重试
       void proc.exit.then(() => {
         // removeAgent 后条目已删，闭包仍持有旧 Runtime，兜底防幽灵 status 广播
         if (!this.agents.has(agentId)) return
-        if (r.status !== "stopped") {
-          r.acp = null
-          r.proc = null
+        if (r.status !== "stopped" && r.status !== "error") {
           this.setStatus(r, "stopped")
         }
+        r.acp = null
+        r.proc = null
         // 该 agent 的挂起 fs/terminal 确认与终端随之收场（无论崩溃还是主动停止）
         this.fsGate?.rejectAgent(agentId)
         this.terminals?.killAgent(agentId)
@@ -209,7 +210,14 @@ export class AgentStore {
       // mcpServers 转发（P1-16）：把客户端侧配置的 MCP server 交给 agent。
       // params 显式注解：SDK request 的泛型重载对宽松类型会静默失配（见 connection.ts 备注）
       const params: NewSessionRequest = { cwd, mcpServers: r.def.mcpServers ?? [] }
-      const res = await acp.agent.request("session/new", params)
+      // 超时保护：桥接包底层 CLI 缺失时 session/new 可能永远挂起（如 pi-acp 无 pi），
+      // 30s 无响应即报错，让前端能给出可见反馈而非无限等待
+      const res = await Promise.race([
+        acp.agent.request("session/new", params),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`session/new 30s 无响应（agent 可能缺少底层 CLI 或已假死）`)), 30_000),
+        ),
+      ])
       this.events.onSessionOpened(agentId, res.sessionId, cwd, metaOf(res))
       return res.sessionId
     } catch (e) {
@@ -223,6 +231,11 @@ export class AgentStore {
         this.setStatus(r, "needs-auth")
         throw new Error(`需要认证：${m?.name ?? m?.id ?? "unknown"}（请在系统终端完成登录后重试）`)
       }
+      // 会话创建失败（典型：桥接包底层 CLI 缺失/假死）：停掉进程并降级为 error，
+      // 避免 agent 停留在 ready 态误导用户（桥接包活着 ≠ 可用）
+      this.stop(agentId)
+      r.errorMsg = `会话创建失败：${String((e as Error)?.message ?? e)}`
+      this.setStatus(r, "error")
       throw e
     }
   }

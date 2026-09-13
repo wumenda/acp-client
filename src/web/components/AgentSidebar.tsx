@@ -13,14 +13,17 @@ export function AgentSidebar() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  // 自动刷新 ①：agent 进入 ready 且尚未加载过列表时，自动拉取一次
+  // 自动刷新 ①：agent 进入 ready 后拉取一次权威列表。不判断 sessions 是否已有数据：
+  // snapshot 的缓存条目（历史建档）可能已与 agent 侧存储脱节，权威 list 负责收敛
+  const refreshed = useRef(new Set<string>())
   useEffect(() => {
     for (const a of Object.values(agents)) {
-      if (a.status === "ready" && a.listSupported && sessions[a.agentId] === undefined) {
+      if (a.status === "ready" && a.listSupported && !refreshed.current.has(a.agentId)) {
+        refreshed.current.add(a.agentId)
         sendCommand({ type: "session.list", agentId: a.agentId })
       }
     }
-  }, [agents, sessions])
+  }, [agents])
 
   // 自动刷新 ②：新建/恢复会话后刷新一次（拿到 agent 侧的权威列表）
   const openCount = openOrder.length
@@ -105,7 +108,16 @@ export function AgentSidebar() {
               </div>
               {!isCollapsed && (
                 <>
-                  {a.status === "stopped" && <button onClick={() => sendCommand({ type: "agent.start", agentId: a.agentId })}>{t.start}</button>}
+                  {(a.status === "stopped" || a.status === "starting") && (
+                    <button
+                      className="btn-start"
+                      disabled={a.status === "starting"}
+                      onClick={() => sendCommand({ type: "agent.start", agentId: a.agentId })}
+                    >
+                      {a.status === "starting" ? <span className="btn-spinner" aria-hidden="true" /> : null}
+                      {a.status === "starting" ? t.starting : t.start}
+                    </button>
+                  )}
                   {a.status === "ready" && <button onClick={() => sendCommand({ type: "agent.stop", agentId: a.agentId })}>{t.stop}</button>}
                   {(a.status === "ready" || a.status === "needs-auth") && (
                     <div className="new-session">
@@ -114,7 +126,8 @@ export function AgentSidebar() {
                         {t.newSession}
                       </button>
                       {a.listSupported && (
-                        <button onClick={() => sendCommand({ type: "session.list", agentId: a.agentId, cwd })}>{t.listSessions}</button>
+                        // 不带 cwd：ACP session/list 的 cwd 是过滤条件，传输入框默认值会让列表被按目录过滤而跳变
+                        <button onClick={() => sendCommand({ type: "session.list", agentId: a.agentId })}>{t.listSessions}</button>
                       )}
                     </div>
                   )}
@@ -151,7 +164,11 @@ function SessionList({ agentId }: { agentId: string }) {
               title={s.title ?? s.sessionId}
               onClick={() => sendCommand({ type: "session.open", agentId, sessionId: s.sessionId, cwd: s.cwd })}
             >
-              {s.title ?? s.sessionId}
+              {/* 聊天气泡图标：标识这是可恢复的历史会话 */}
+              <svg className="session-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span className="session-name">{s.title ?? s.sessionId}</span>
             </button>
             {/* 删除会话（P1-15）：仅当 agent 声明 delete 能力 */}
             {deleteSupported && (

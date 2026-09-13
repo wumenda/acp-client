@@ -23,7 +23,11 @@ export class RegistryService {
 
   constructor(private p: { home: string; url?: string; events: RegistryEvents; autoRefresh?: boolean }) {
     void this.loadCache()
-    if (p.autoRefresh !== false) void this.refresh(false).catch(() => {})
+    if (p.autoRefresh !== false) {
+      void this.refresh(false).catch((e) => {
+        console.warn(`[registry] 启动拉取失败: ${(e as Error)?.message ?? e}（可稍后在面板中手动刷新）`)
+      })
+    }
   }
 
   view(): { agents: RegistryAgentView[]; fetchedAt: number; stale: boolean } {

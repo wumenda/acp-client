@@ -53,6 +53,7 @@ export function App() {
   const apply = useFront((s) => s.apply)
   const connected = useFront((s) => s.connected)
   const registryOpen = useFront((s) => s.registryOpen)
+  const lastError = useFront((s) => s.lastError)
   const [logOpen, setLogOpen] = useState(false)
 
   // 刷新恢复（P0-3）①：视图态（openOrder/activeKey）变化时写入 localStorage
@@ -109,6 +110,25 @@ export function App() {
         <ThemeToggle />
       </header>
       {!connected && <div className="banner">{t.disconnected}</div>}
+      {/* 全局操作错误（session.new/open 失败等无会话上下文的错误）：横幅展示，可关闭 */}
+      {lastError && (
+        <div className="banner banner-error" role="alert">
+          <span className="banner-err-text">
+            <b>{t.errorBanner}：</b>
+            {lastError}
+          </span>
+          <button
+            className="icon-btn banner-close"
+            aria-label={t.close}
+            title={t.close}
+            onClick={() => useFront.setState({ lastError: undefined })}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
       <AuthCard />
       <div className="layout">
         <AgentSidebar />

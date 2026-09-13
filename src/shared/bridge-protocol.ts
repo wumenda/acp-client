@@ -86,7 +86,7 @@ export type BridgeEvent =
   | { type: "snapshot"; agents: AgentStatusView[]; sessions: Record<string, SessionMetaView[]> }
   | { type: "agent.status"; agent: AgentStatusView }
   | { type: "session.list"; agentId: string; sessions: SessionMetaView[] }
-  | { type: "session.opened"; agentId: string; sessionId: string; cwd: string; modes?: SessionModesView; configOptions?: SessionConfigOptionView[] }
+  | { type: "session.opened"; agentId: string; sessionId: string; cwd: string; title?: string; modes?: SessionModesView; configOptions?: SessionConfigOptionView[] }
   | { type: "session.update"; agentId: string; sessionId: string; update: unknown }
   | { type: "prompt.done"; agentId: string; sessionId: string; stopReason: string }
   | { type: "prompt.error"; agentId: string; sessionId: string | null; message: string }

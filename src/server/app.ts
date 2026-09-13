@@ -55,7 +55,9 @@ export function wireStoreEvents(hub: Hub, cache: SessionCache, log?: AcpLog): St
     onPromptError: (agentId, sessionId, message) => hub.emit({ type: "prompt.error", agentId, sessionId, message }),
     onSessionOpened: (agentId, sessionId, cwd, meta) => {
       cache.upsert(agentId, { sessionId, cwd, updatedAt: Date.now() })
-      hub.emit({ type: "session.opened", agentId, sessionId, cwd, ...(meta ?? {}) })
+      // 已缓存的动态标题随 opened 带回：恢复会话瞬间即显示名字，而非 ses_xxx
+      const title = cache.list(agentId).find((s) => s.sessionId === sessionId)?.title
+      hub.emit({ type: "session.opened", agentId, sessionId, cwd, ...(title ? { title } : {}), ...(meta ?? {}) })
     },
     onSessionList: (agentId, sessions) => hub.emit({ type: "session.list", agentId, sessions }),
   }

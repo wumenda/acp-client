@@ -51,10 +51,12 @@ export async function installBinary(p: {
   await pipeline(Readable.fromWeb(res.body as never), createWriteStream(archivePath))
 
   p.onProgress("verifying")
-  const actual = createHash("sha256").update(readFileSync(archivePath)).digest("hex")
-  if (actual !== p.spec.sha256.toLowerCase()) {
-    rmSync(dir, { recursive: true, force: true })
-    throw new Error(`sha256 校验失败：期望 ${p.spec.sha256.slice(0, 12)}…，实际 ${actual.slice(0, 12)}…`)
+  if (p.spec.sha256) {
+    const actual = createHash("sha256").update(readFileSync(archivePath)).digest("hex")
+    if (actual !== p.spec.sha256.toLowerCase()) {
+      rmSync(dir, { recursive: true, force: true })
+      throw new Error(`sha256 校验失败：期望 ${p.spec.sha256.slice(0, 12)}…，实际 ${actual.slice(0, 12)}…`)
+    }
   }
 
   p.onProgress("extracting")

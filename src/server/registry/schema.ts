@@ -3,7 +3,7 @@ import { z } from "zod"
 
 export const PlatformSpecSchema = z.object({
   archive: z.string().min(1),
-  sha256: z.string().min(1),
+  sha256: z.string().min(1).optional(), // registry 新版已将 sha256 改为可选
   cmd: z.string().min(1),
   args: z.array(z.string()).optional(),
   env: z.record(z.string(), z.string()).optional(),
