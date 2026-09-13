@@ -46,4 +46,43 @@ describe("loadAgentDefs", () => {
     )
     expect(loadAgentDefs(dir).map((d) => d.name)).toEqual(["dsh", "opencode", "fake"])
   })
+
+  it("mcpServers 配置（P1-16）：stdio/http/sse 解析通过，非法 type 抛错", () => {
+    const dir = tmpHome()
+    writeFileSync(
+      path.join(dir, "agents.json"),
+      JSON.stringify({
+        agents: [
+          {
+            name: "fake",
+            command: "node",
+            mcpServers: [
+              { type: "stdio", name: "fs", command: "node", args: ["fs-server.js"], env: [{ name: "MODE", value: "rw" }] },
+              { type: "http", name: "web", url: "http://127.0.0.1:9000/mcp", headers: [] },
+              { type: "sse", name: "events", url: "http://127.0.0.1:9001/sse" },
+            ],
+          },
+        ],
+      }),
+    )
+    const def = loadAgentDefs(dir).find((d) => d.name === "fake")!
+    expect(def.mcpServers).toHaveLength(3)
+    expect(def.mcpServers![0]).toMatchObject({ type: "stdio", name: "fs", command: "node" })
+    // 非法 type → 拒绝加载
+    writeFileSync(
+      path.join(dir, "agents.json"),
+      JSON.stringify({ agents: [{ name: "fake", command: "node", mcpServers: [{ type: "wat", name: "x" }] }] }),
+    )
+    expect(() => loadAgentDefs(dir)).toThrow()
+  })
+
+  it("loadAgentDefs 合并 registry-installs.json 的固化 AgentDef", () => {
+    const dir = tmpHome()
+    writeFileSync(path.join(dir, "registry-installs.json"), JSON.stringify({
+      installs: [{ id: "npmed", name: "n", version: "1.0.0", kind: "npx", installedAt: 1, def: { name: "npmed", command: "npx", args: ["-y", "pkg"], env: {}, autoStart: false, builtin: false } }],
+    }))
+    const defs = loadAgentDefs(dir)
+    expect(defs.find((d) => d.name === "npmed")?.command).toBe("npx")
+    expect(defs.filter((d) => d.name === "npmed")).toHaveLength(1)
+  })
 })
