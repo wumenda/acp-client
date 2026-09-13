@@ -38,7 +38,7 @@ export class RegistryService {
         return {
           id: a.id, name: a.name, version: a.version,
           description: a.description, website: a.website, repository: a.repository,
-          license: a.license, authors: a.authors,
+          license: a.license, authors: a.authors, icon: a.icon,
           kind: resolved?.kind ?? "binary",
           supported: resolved != null,
           installed: inst != null,

@@ -40,6 +40,8 @@ export type RegistryAgentView = {
   repository?: string
   license?: string
   authors?: string[]
+  /** SVG 16x16 图标 URL */
+  icon?: string
   kind: "binary" | "npx" | "uvx"
   /** 当前平台存在可安装的分发形态 */
   supported: boolean
