@@ -7,6 +7,9 @@ import { serve } from "@hono/node-server"
 import { WebSocket } from "ws"
 import type { BridgeCommand, BridgeEvent } from "../src/shared/bridge-protocol"
 import { createApp, createHub, wireStoreEvents } from "../src/server/app"
+import { FsGate } from "../src/server/fs-proxy"
+import { TerminalManager } from "../src/server/terminal-manager"
+import { RegistryService } from "../src/server/registry/service"
 import { SessionCache } from "../src/server/session-cache"
 import { AgentStore } from "../src/server/store"
 import type { AgentDef } from "../src/shared/agent-def"
@@ -25,13 +28,38 @@ export type Harness = {
   close(): Promise<void>
 }
 
-export async function createHarness(defs: AgentDef[]): Promise<Harness> {
+export async function createHarness(defs: AgentDef[], opts: { registryUrl?: string } = {}): Promise<Harness> {
   const token = "test-token"
   const hub = createHub()
   const cacheDir = mkdtempSync(path.join(tmpdir(), "acp-client-app-"))
   const cache = new SessionCache(cacheDir)
-  const store = new AgentStore(defs, wireStoreEvents(hub, cache))
-  const { app, injectWebSocket } = createApp({ token, store, hub, cache, staticRoot: "dist/web" })
+  // fs 代理（P2-17）+ terminal 代理（P2-18）：与 main.ts 同构 —— 事件经 hub 推给 WS 客户端
+  const events = wireStoreEvents(hub, cache)
+  const fsGate = new FsGate(
+    (agentId, sessionId) => cache.list(agentId).find((s) => s.sessionId === sessionId)?.cwd,
+    { onConfirm: (req) => events.onFsConfirm!(req), onDone: (requestId) => events.onFsDone!(requestId) },
+  )
+  const terminals = new TerminalManager({
+    onConfirm: (req) => events.onTermConfirm!(req),
+    onDone: (requestId) => events.onTermDone!(requestId),
+  })
+  const store = new AgentStore(defs, events, fsGate, terminals)
+  // ACP Registry（P2-21）：与 main.ts 同构接线（autoRefresh 关闭由测试显式 refresh/install）
+  let registry: RegistryService | undefined
+  if (opts.registryUrl) {
+    registry = new RegistryService({
+      home: mkdtempSync(path.join(tmpdir(), "acp-client-reg-")),
+      url: opts.registryUrl,
+      autoRefresh: false,
+      events: {
+        onSnapshot: (v) => hub.emit({ type: "registry.snapshot", ...v }),
+        onProgress: (p) => hub.emit({ type: "registry.progress", ...p }),
+        onInstalled: (def) => store.addAgent(def),
+        onUninstalled: (id) => { try { store.stop(id) } catch { /* 未启动 */ } store.removeAgent(id) },
+      },
+    })
+  }
+  const { app, injectWebSocket } = createApp({ token, store, hub, cache, staticRoot: "dist/web", fsGate, terminals, registry })
   const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" })
   injectWebSocket(server)
   await new Promise<void>((resolve) => server.once("listening", resolve))
