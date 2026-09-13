@@ -6,7 +6,8 @@
       "name": "fake",
       "command": "node",
       "args": ["--import", "tsx", "C:/Users/Wumd/Desktop/harness/acp-client/tests/fake-agent-child.ts"],
-      "env": { "FAKE_ASK_PERMISSION": "1" }
+      "env": { "FAKE_ASK_PERMISSION": "1" },
+      "autoStart": true
     }
   ]
 }

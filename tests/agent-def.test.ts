@@ -8,6 +8,7 @@ describe("AgentDefSchema", () => {
     expect(def.args).toEqual([])
     expect(def.env).toEqual({})
     expect(def.builtin).toBe(false)
+    expect(def.autoStart).toBe(false)
     expect(def.shell).toBeUndefined()
   })
 

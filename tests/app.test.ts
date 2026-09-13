@@ -12,6 +12,7 @@ const FAKE_DEF = {
   command: `"${process.execPath}"`,
   args: ["--import", "tsx", `"${CHILD}"`],
   env: {},
+  autoStart: false,
   builtin: false,
 }
 
@@ -62,6 +63,7 @@ describe("app", () => {
         command: `"${process.execPath}"`,
         args: ["--import", "tsx", `"${CHILD}"`],
         env: { FAKE_ASK_PERMISSION: "1" },
+        autoStart: false,
         builtin: false,
       },
     ])

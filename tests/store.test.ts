@@ -2,7 +2,7 @@
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import type { SessionNotification } from "@agentclientprotocol/sdk"
-import { AgentStore, type StoreEvents } from "../src/server/store"
+import { AgentStore, startAutoAgents, type StoreEvents } from "../src/server/store"
 import type { AgentStatusView } from "../src/shared/bridge-protocol"
 import type { AgentDef } from "../src/shared/agent-def"
 
@@ -14,6 +14,7 @@ const FAKE_DEF: AgentDef = {
   command: `"${process.execPath}"`,
   args: ["--import", "tsx", `"${CHILD}"`],
   env: {},
+  autoStart: false,
   builtin: false,
 }
 
@@ -91,6 +92,18 @@ describe("AgentStore", () => {
     proc.kill()
     await vi_waitFor(() => store.statusOf("fake") === "stopped")
     store.stop("fake")
+  }, 15000)
+
+  it("startAutoAgents 只拉起标记 autoStart 的 agent", async () => {
+    const r = recorder()
+    const on: AgentDef = { ...FAKE_DEF, name: "auto-on", autoStart: true }
+    const off: AgentDef = { ...FAKE_DEF, name: "auto-off", autoStart: false }
+    const store = new AgentStore([on, off], r.base)
+    const started = startAutoAgents(store, [on, off])
+    expect(started).toEqual(["auto-on"])
+    await vi_waitFor(() => store.statusOf("auto-on") === "ready")
+    expect(store.statusOf("auto-off")).toBe("stopped")
+    store.stop("auto-on")
   }, 15000)
 })
 

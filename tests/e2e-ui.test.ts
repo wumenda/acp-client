@@ -30,6 +30,7 @@ beforeAll(async () => {
       command: WIN_NODE,
       args: ["--import", "tsx", `"${CHILD}"`],
       env: { FAKE_ASK_PERMISSION: "1" },
+      autoStart: false,
       builtin: false,
     },
   ])

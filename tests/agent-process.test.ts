@@ -15,6 +15,7 @@ describe("spawnAgentProcess", () => {
       command: `"${process.execPath}"`,
       args: ["--import", "tsx", `"${CHILD}"`],
       env: {},
+      autoStart: false,
       builtin: false,
     })
     const updates: SessionNotification[] = []

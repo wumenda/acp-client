@@ -258,3 +258,10 @@ export class AgentStore {
     this.events.onAgentStatus(r.def.name, this.view(r))
   }
 }
+
+/** server 启动时拉起所有标记 autoStart 的 agent；不阻塞，失败经 onAgentStatus 上报为 error。 */
+export function startAutoAgents(store: AgentStore, defs: AgentDef[]): string[] {
+  const names = defs.filter((d) => d.autoStart === true).map((d) => d.name)
+  for (const name of names) void store.start(name)
+  return names
+}

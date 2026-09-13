@@ -11,7 +11,7 @@
 _Avoid_: server、backend、provider
 
 **Agent 定义**：
-`agents.json` 中的一条配置 `{ name, command, args, env }`，描述如何启动一个 Agent。真相源是配置文件，不是 UI。
+`agents.json` 中的一条配置 `{ name, command, args, env, autoStart }`，描述如何启动一个 Agent；`autoStart: true` 时 server 启动即拉起。真相源是配置文件，不是 UI。
 _Avoid_: profile（与 dsh 自身的 `--profile` 启动概念冲突）
 
 **内置模板**：
