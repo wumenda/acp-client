@@ -106,9 +106,17 @@ export function createApp(deps: AppDeps) {
         case "session.list":
           await s.listSessions(cmd.agentId, cmd.cwd)
           break
-        case "session.prompt":
+        case "session.prompt": {
+          // 本地回显：立即广播 user_message_chunk，用户消息即时上屏（agent 侧是否回放与本次无关）
+          deps.hub.emit({
+            type: "session.update",
+            agentId: cmd.agentId,
+            sessionId: cmd.sessionId,
+            update: { sessionUpdate: "user_message_chunk", content: { type: "text", text: cmd.text } },
+          } satisfies BridgeEvent)
           void s.prompt(cmd.agentId, cmd.sessionId, cmd.text)
           break
+        }
         case "session.cancel":
           s.cancel(cmd.agentId, cmd.sessionId)
           break

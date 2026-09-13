@@ -43,8 +43,12 @@ describe("app", () => {
     const sessionId = opened.sessionId
 
     ws.send({ type: "session.prompt", agentId: "fake", sessionId, text: "hi" } satisfies BridgeCommand)
-    const sawUpdate = (await ws.next((e) => e.type === "session.update")) as { update: { sessionUpdate: string } }
-    expect(sawUpdate.update.sessionUpdate).toBeTruthy()
+    const echo = (await ws.next((e) => e.type === "session.update")) as {
+      update: { sessionUpdate: string; content?: { type: string; text: string } }
+    }
+    expect(echo.update.sessionUpdate).toBe("user_message_chunk")
+    expect(echo.update.content).toMatchObject({ type: "text", text: "hi" })
+    await ws.next((e) => e.type === "session.update")
     const done = await ws.next((e) => e.type === "prompt.done")
     expect((done as { stopReason: string }).stopReason).toBe("end_turn")
     ws.close()
