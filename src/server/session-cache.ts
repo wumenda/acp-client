@@ -37,6 +37,23 @@ export class SessionCache {
     this.save()
   }
 
+  /** 动态标题（session_info_update）：无记录时忽略，等 open/list 建档后再写。 */
+  setTitle(agentId: string, sessionId: string, title: string): void {
+    const cur = this.data[agentId]?.[sessionId]
+    if (!cur) return
+    if (cur.title === title) return
+    cur.title = title
+    this.save()
+  }
+
+  /** 会话删除（session/delete）：同步清掉本地缓存条目。 */
+  remove(agentId: string, sessionId: string): void {
+    const bucket = this.data[agentId]
+    if (!bucket?.[sessionId]) return
+    delete bucket[sessionId]
+    this.save()
+  }
+
   private save(): void {
     mkdirSync(path.dirname(this.file), { recursive: true })
     const tmp = this.file + ".tmp"

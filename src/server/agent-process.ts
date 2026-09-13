@@ -14,14 +14,25 @@ export type AgentProcess = {
   kill(): void
 }
 
-export function spawnAgentProcess(def: AgentDef): AgentProcess {
+export function spawnAgentProcess(def: AgentDef, onLog?: (dir: "in" | "out", data: string) => void): AgentProcess {
   const proc = spawn(def.command, def.args, {
     env: { ...process.env, ...def.env },
     // Windows 的 dsh/opencode 是 .cmd shim，必须走 shell
     shell: def.shell ?? process.platform === "win32",
     stdio: ["pipe", "pipe", "pipe"],
   })
-  const stream = stdioToStream(proc.stdin!, proc.stdout!)
+  // ACP 线上日志（§2.4-26）：stdout 旁观 tee；stdin 包装 tee（write 透传）
+  let stdin: Writable = proc.stdin!
+  if (onLog) {
+    proc.stdout!.on("data", (d: Buffer) => onLog("in", d.toString()))
+    stdin = new Writable({
+      write(chunk: Buffer, _enc, cb) {
+        onLog("out", chunk.toString())
+        proc.stdin!.write(chunk, cb)
+      },
+    })
+  }
+  const stream = stdioToStream(stdin, proc.stdout!)
   let tail = ""
   proc.stderr!.on("data", (d: Buffer) => {
     tail = (tail + d.toString()).slice(-4096)

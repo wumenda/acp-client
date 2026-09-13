@@ -32,4 +32,14 @@ describe("SessionCache", () => {
     expect(c.list("dsh")[0].updatedAt).toBe(99)
     expect(c.list("nope")).toEqual([])
   })
+
+  it("setTitle 更新已建档会话标题并持久化；未建档忽略", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "acp-client-"))
+    const c = new SessionCache(dir)
+    c.upsert("dsh", { sessionId: "s1", cwd: "C:/a", updatedAt: 1 })
+    c.setTitle("dsh", "s1", "新标题")
+    c.setTitle("dsh", "ghost", "无记录应忽略")
+    const b = new SessionCache(dir)
+    expect(b.list("dsh")).toEqual([{ sessionId: "s1", cwd: "C:/a", updatedAt: 1, title: "新标题" }])
+  })
 })

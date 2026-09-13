@@ -40,3 +40,17 @@ Agent 在工具执行前发起的 `session/requestPermission` 回调，客户端
 **会话缓存**：
 客户端本地保存的 Session 元数据（id/title/cwd/最近活跃），从 `session/list` 同步，可随时丢弃重建；transcript 的唯一事实源永远在 agent 侧。
 _Avoid_: 聊天记录镜像、历史同步
+
+### ACP Registry
+
+**ACP Registry**（P2-21）：
+Zed + JetBrains 联合维护的公共 agent 目录。索引端点 `https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json`，结构 `{ version, agents: [...] }`，上游每小时重建；客户端以 1 小时 TTL stale-while-revalidate + 磁盘缓存（`registry-cache.json`）消费。
+
+**分发形态**：
+registry entry 的 `distribution` 三选一 —— `binary`（六平台 map，每平台 `{ archive, sha256, cmd, args?, env? }`，archive 支持 zip/tar.gz/tar.bz2/裸二进制）、`npx`、`uvx`（均 `{ package, args? }`，免下载，运行时依赖用户机器）。平台映射：`win32+x64→windows-x86_64`、`win32+arm64→windows-aarch64`、`darwin/{arm64,x64}`、`linux/{arm64,x64}`；不支持的组合条目 `supported:false`（UI 置灰不阻断列表）。
+
+**安装清单**：
+`registry-installs.json`（configDir 下），与用户 `agents.json` 分离、不改写之。binary 安装走 下载→sha256 校验→系统 `tar` 解压（`installed/<id>/`，重装先清空即升级）→ 固化完整 AgentDef 落清单；npx/uvx 安装只写清单（command=`npx`/`uvx`）。启动时 `loadAgentDefs` 按内置→用户→安装项顺序合并（同名跳过 + warn）。安装即 `AgentStore.addAgent`，卸载先 stop 再 `removeAgent`；重启后由清单合并恢复。
+
+**安装进度**：
+`registry.progress` 事件 stage 单向推进 `downloading → verifying → extracting → registering → done | error`；目录数据走独立 `registry.snapshot` 事件（与主 snapshot 分离，WS 打开且有缓存时补发）。
