@@ -31,7 +31,7 @@ export async function createHarness(defs: AgentDef[]): Promise<Harness> {
   const cacheDir = mkdtempSync(path.join(tmpdir(), "acp-client-app-"))
   const cache = new SessionCache(cacheDir)
   const store = new AgentStore(defs, wireStoreEvents(hub, cache))
-  const { app, injectWebSocket } = createApp({ token, store, hub, cache })
+  const { app, injectWebSocket } = createApp({ token, store, hub, cache, staticRoot: "dist/web" })
   const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" })
   injectWebSocket(server)
   await new Promise<void>((resolve) => server.once("listening", resolve))

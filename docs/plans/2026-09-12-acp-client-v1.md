@@ -2479,6 +2479,7 @@ git commit -m "chore: v1 complete (agent processes, permission bridge, chat UI)"
 
 ## 已知取舍（写给实现者）
 
-1. **user 消息实时回显**：依赖 agent 回推 `user_message_chunk`；不回推时 v1 不本地合成（服务端事件唯一事实源）。若验收体验差，v1.1 在 `session.prompt` 命令处理里广播一个本地 `session.update`。
-2. **`spawn(shell:true)` 的参数拼接**：Windows 下 args 含空格需自行加引号；内置模板不受影响。
+1. **user 消息实时回显**：~~v1 依赖 agent 回推~~ → **已实现**：`session.prompt` 命令处理里由 server 立即广播合成 `user_message_chunk`（仍是服务端事件唯一事实源），app.test.ts 已断言首条 update 为回显。
+2. **`spawn(shell:true)` 的参数拼接**：Windows 下 args 含空格需自行加引号；内置模板不受影响。实测 node 路径 `C:\Program Files\nodejs\node.exe` 命中此坑，测试里已用引号包裹。
 3. **prompt 进行中关页面**：pending permission 在连接关闭时已由 store 兜底 resolve cancelled；prompt 继续在 server 侧跑完（transcript 在 agent 侧，不丢）。
+4. **浏览器 E2E**：`tests/e2e-ui.test.ts`（真实 chromium + 真实 server + 真实 fake 子进程全链路），运行 `pnpm test:e2e`，需先 `npx playwright install chromium`；浏览器缺失时自动跳过。E2E 曾揪出单测覆盖不到的问题：`scrollIntoView` 的 Promise 被当作 effect cleanup 导致整树卸载（已修复，d621b6f）。
