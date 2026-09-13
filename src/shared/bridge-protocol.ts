@@ -48,6 +48,7 @@ export type RegistryAgentView = {
   /** registry 版本 > 已安装版本（X.Y.Z 逐段比较） */
   updateAvailable: boolean
 }
+export type RegistrySnapshot = { agents: RegistryAgentView[]; fetchedAt: number; stale: boolean }
 
 // —— 会话控制面（P1-11）：modes / configOptions 的统一视图 ——
 export type SessionModeView = { id: string; name: string }
@@ -74,6 +75,10 @@ export type BridgeCommand =
   | { type: "elicitation.respond"; requestId: number; action: "accept" | "decline" | "cancel"; content?: Record<string, string | number | boolean | string[]> }
   | { type: "auth.retry"; agentId: string }
   | { type: "log.subscribe"; on: boolean }
+  // —— ACP Registry（P2-21）——
+  | { type: "registry.refresh" }
+  | { type: "registry.install"; id: string }
+  | { type: "registry.uninstall"; id: string }
 
 export type BridgeEvent =
   | { type: "snapshot"; agents: AgentStatusView[]; sessions: Record<string, SessionMetaView[]> }
@@ -108,3 +113,6 @@ export type BridgeEvent =
   | { type: "elicitation.done"; requestId: number; action?: "accept" | "decline" | "cancel" }
   | { type: "session.closed"; agentId: string; sessionId: string; deleted: boolean }
   | { type: "acp.log"; agentId: string; dir: "in" | "out"; data: string }
+  // —— ACP Registry（P2-21）：snapshot 与主 snapshot 分离（异步加载不阻塞）；progress stage 单向推进 ——
+  | { type: "registry.snapshot"; agents: RegistryAgentView[]; fetchedAt: number; stale: boolean }
+  | { type: "registry.progress"; id: string; stage: "downloading" | "verifying" | "extracting" | "registering" | "done" | "error"; message?: string }
